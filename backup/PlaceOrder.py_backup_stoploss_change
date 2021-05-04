@@ -1,0 +1,96 @@
+import csv,requests
+import itertools
+import pandas as pd 
+import json
+
+column_names = ["LTP", "LTT"]
+column_names_alert = ["LTP", "SIGNAL"]
+ 
+#this will return a user details and generated session token
+f = open("/home/egarg0587/stocktesting/token.txt", "r")
+access_token = f.read()
+headers = {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json',
+  'x-session-token': access_token
+} 
+
+def buy_or_sell(price,buyOrSell):
+
+    if buyOrSell=='BUY':
+        stop_loss_trigger=price-100
+        price=price+1
+    elif buyOrSell=='SELL':
+        stop_loss_trigger = price+100
+        price=price-1
+ 
+   
+    requestBody={
+    "symbolName": "BANKNIFTY20NOVFUT",
+    "exchange": "NFO",
+    "transactionType": buyOrSell,
+    "orderType": "L",
+    "quantity": "25",
+    "disclosedQuantity": "",
+    "price": price,
+    "orderValidity": "DAY",
+    "productType": "CO",
+    "triggerPrice": stop_loss_trigger
+     }
+  
+    r = requests.post('https://api.stocknote.com/order/placeOrderCO', data=json.dumps(requestBody), headers = headers)
+    print(r.json())
+    print("Order placed successfully!!", price, buyOrSell)
+
+
+def initiate_trade(trigger_price,trigger_signal):
+    while (1<2):
+        df = pd.read_csv("/home/egarg0587/stocktesting/filewriteIndex.csv", names=column_names)
+        price = df.LTP.to_list()
+        # print(price[-1])
+        fut_trigger_price=price[-1]
+
+        df = pd.read_csv("/home/egarg0587/stocktesting/filewrite.csv", names=column_names)
+        price = df.LTP.to_list()
+        print(price[-1])
+        ltp_banknifty=price[-1]
+        print("Trigger price:",trigger_price)
+                
+        if trigger_signal=='BUY':
+          if (ltp_banknifty<=trigger_price):
+            print("Trigger price:",trigger_price)
+            buy_or_sell(fut_trigger_price,trigger_signal)           
+            break  
+
+        if trigger_signal=='SELL':
+          if (ltp_banknifty>=trigger_price):
+            print("Trigger price:",trigger_price)
+            buy_or_sell(fut_trigger_price,trigger_signal)           
+            break
+
+
+#Start
+df = pd.read_csv("/home/egarg0587/stocktesting/Alert.csv", names=column_names_alert)
+price = df.LTP.to_list()
+signal = df.SIGNAL.to_list()
+print("To be traded: ")
+print(price)
+if (price):      
+    print(price[-1])
+    print(type(price[-1]))
+    trigger_price= price[-1]
+    trigger_signal = signal[-1]
+    initiate_trade(trigger_price,trigger_signal)
+
+# while (1<2):
+#     df = pd.read_csv("filewriteIndex.csv", names=column_names)
+#     price = df.LTP.to_list()
+#     print(price[-1])
+
+#     df = pd.read_csv("filewrite.csv", names=column_names)
+#     price = df.LTP.to_list()
+#     print(price[-1])
+
+
+
+
